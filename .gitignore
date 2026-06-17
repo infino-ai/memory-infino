@@ -3,3 +3,5 @@ dist/
 *.tgz
 .DS_Store
 memory/
+eval/data/
+eval/results/

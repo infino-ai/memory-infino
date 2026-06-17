@@ -25,7 +25,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test"
+    "test": "npm run build && node --test",
+    "eval:locomo": "npm run build && node eval/run-locomo.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
