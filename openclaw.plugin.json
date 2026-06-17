@@ -1,0 +1,93 @@
+{
+  "id": "memory-infino",
+  "name": "Memory (Infino)",
+  "description": "Infino-backed long-term memory for OpenClaw — hybrid (BM25 + vector) recall on object storage.",
+  "kind": "memory",
+  "activation": {
+    "onStartup": false
+  },
+  "contracts": {
+    "tools": ["memory_recall", "memory_store", "memory_forget"]
+  },
+  "uiHints": {
+    "embedding.provider": {
+      "label": "Embedding Provider",
+      "placeholder": "openai",
+      "help": "Embedding provider to use (for example openai or ollama)"
+    },
+    "embedding.model": {
+      "label": "Embedding Model",
+      "placeholder": "text-embedding-3-small",
+      "help": "Embedding model name"
+    },
+    "embedding.dimensions": {
+      "label": "Dimensions",
+      "placeholder": "1536",
+      "help": "Vector dimensions (required for non-OpenAI models); infino requires 16-4096",
+      "advanced": true
+    },
+    "embedding.apiKey": {
+      "label": "Embedding API Key",
+      "sensitive": true,
+      "help": "Optional API key for OpenAI-compatible embeddings; omit for local providers"
+    },
+    "embedding.baseUrl": {
+      "label": "Base URL",
+      "placeholder": "https://api.openai.com/v1",
+      "help": "Optional embedding endpoint base URL (e.g. http://127.0.0.1:11434 for Ollama)",
+      "advanced": true
+    },
+    "dbPath": {
+      "label": "Database Path",
+      "placeholder": "memory/infino",
+      "help": "Local path or s3://|gs://|az:// URI for the memory catalog",
+      "advanced": true
+    },
+    "nCent": {
+      "label": "IVF Centroids",
+      "help": "Vector index centroid count; 1 = exact (right for memory-scale stores)",
+      "advanced": true
+    },
+    "autoRecall": {
+      "label": "Auto-Recall",
+      "help": "Automatically inject relevant memories into context"
+    },
+    "autoCapture": {
+      "label": "Auto-Capture",
+      "help": "Automatically capture important information from conversations"
+    },
+    "storageOptions": {
+      "label": "Storage Options",
+      "advanced": true,
+      "help": "S3-compatible storage options (endpoint, access_key, secret_key); supports ${ENV_VAR} values"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "embedding": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "provider": { "type": "string" },
+          "model": { "type": "string" },
+          "dimensions": { "type": "integer", "minimum": 1 },
+          "apiKey": { "type": "string" },
+          "baseUrl": { "type": "string" }
+        }
+      },
+      "dbPath": { "type": "string" },
+      "nCent": { "type": "integer", "minimum": 1 },
+      "autoRecall": { "type": "boolean" },
+      "autoCapture": { "type": "boolean" },
+      "recallK": { "type": "number" },
+      "recallMaxChars": { "type": "number", "minimum": 100, "maximum": 10000 },
+      "storageOptions": {
+        "type": "object",
+        "additionalProperties": { "type": "string" }
+      }
+    }
+  }
+}
