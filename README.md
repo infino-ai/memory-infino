@@ -18,6 +18,32 @@ An [OpenClaw](https://docs.openclaw.ai) memory plugin backed by [Infino](https:/
 | `memory_store` | Save a memory (embedded on write) |
 | `memory_forget` | Delete by id, or find-and-delete by query |
 
+## Install (internal — via Gemfury)
+
+Published to the `infino` Gemfury account for internal team use (public npm at
+launch). It's a public Gemfury package, so no token is needed — installs just
+need the Gemfury smart proxy as the registry so the `infino` binding (and the
+plugin) resolve.
+
+Point npm at the proxy via a project or user `~/.npmrc`:
+
+```
+registry=https://npm-proxy.fury.io/infino/
+```
+
+Then install the plugin into OpenClaw and select it:
+
+```sh
+openclaw plugins install @infino-ai/memory-infino
+openclaw plugins enable memory-infino          # plugin id is "memory-infino"
+# set plugins.slots.memory = "memory-infino" + an embedder (see Configure)
+openclaw                                        # restart the gateway
+```
+
+> Note the two names: the **npm package** is `@infino-ai/memory-infino`; the
+> **OpenClaw plugin id** (used for `plugins.slots.memory` and `plugins.entries`)
+> is `memory-infino`.
+
 ## Configure
 
 Select the plugin for the memory slot and give it an embedder + a path:
