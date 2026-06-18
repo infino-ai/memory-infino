@@ -65,7 +65,11 @@ function openAiCompatibleEmbedder(e: MemoryConfig["embedding"]): Embedder {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(e.apiKey ? { Authorization: `Bearer ${e.apiKey}` } : {}),
+          // Send both auth headers: OpenAI uses the Bearer token, Azure OpenAI
+          // authenticates the embeddings endpoint with the `api-key` header
+          // (Bearer there is reserved for AAD tokens). Sending both works for
+          // either provider.
+          ...(e.apiKey ? { Authorization: `Bearer ${e.apiKey}`, "api-key": e.apiKey } : {}),
         },
         body: JSON.stringify({
           model: e.model,
