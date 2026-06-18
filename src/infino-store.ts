@@ -36,7 +36,6 @@ export interface InfinoStoreConfig {
 
 type Row = Record<string, unknown>;
 
-const RRF_K = 60;
 const DEFAULT_K = 8;
 const sqlStr = (s: string) => s.replace(/'/g, "''"); // single-quote escape
 
@@ -166,35 +165,29 @@ export class InfinoMemoryStore {
     return this.scope(hits, opts).slice(0, k);
   }
 
-  /** Hybrid recall: BM25 + vector fused by Reciprocal Rank Fusion. One engine,
-   *  no rerank service. RRF uses each list's rank order, so the BM25-relevance
-   *  vs vector-distance scale mismatch is irrelevant. This is the differentiator. */
+  /** Hybrid recall: BM25 + vector fused in a SINGLE PASS by infino's native
+   *  `hybrid_search` SQL table function — one engine, one query, no rerank
+   *  service and no client-side fusion. The TVF runs both retrievers and fuses
+   *  them internally, returning rows best-first with a fused `score`. This
+   *  first-class single-pass hybrid is the differentiator. Degrades to
+   *  vector-only if the query has no usable terms / the FTS index is empty. */
   recallHybrid(query: string, vector: number[], opts: RecallOptions = {}): MemoryHit[] {
     const k = opts.k ?? DEFAULT_K;
     const n = this.fetchN(opts, k);
     const t = this.readTable();
     if (!t) return [];
-    let kw: Row[] = [];
+    const cols = "id, text, importance, category, created_at, score";
+    const sql =
+      `SELECT ${cols} FROM hybrid_search(` +
+      `'${sqlStr(this.table)}', 'text', '${sqlStr(query)}', 'vector', '${vector.join(",")}', ${n})`;
+    let rows: Row[];
     try {
-      kw = t.bm25Search("text", query, n, { projection: this.projection }) as Row[];
+      rows = this.db.querySql(sql) as Row[];
     } catch {
-      /* no tokens / empty index -> degrade to vector-only */
+      // no usable query terms / empty FTS index -> degrade to vector-only
+      return this.recallSemantic(vector, opts);
     }
-    const vec = t.vectorSearch("vector", vector, n, { projection: this.projection }) as Row[];
-
-    const score = new Map<string, number>();
-    const byId = new Map<string, Row>();
-    for (const list of [vec, kw]) {
-      list.forEach((r, rank) => {
-        // both lists are best-first
-        const id = String(r.id);
-        byId.set(id, r);
-        score.set(id, (score.get(id) ?? 0) + 1 / (RRF_K + rank));
-      });
-    }
-    const hits = [...score.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([id, s]) => this.rowToHit(byId.get(id)!, s));
+    const hits = rows.map((r) => this.rowToHit(r, Number(r.score))); // fused score, higher=better
     return this.scope(hits, opts).slice(0, k);
   }
 
