@@ -1,0 +1,65 @@
+name: Publish to ClawHub
+
+# Publishes @infino-ai/memory-infino to ClawHub (clawhub.ai), OpenClaw's plugin
+# registry. This is separate from the npm publish (publish.yml).
+#
+# Why publish the local folder (not the GitHub ref): dist/ is gitignored, so the
+# ref has no built runtime and a ref-publish fails ("./dist/index.js missing").
+# We build here, then `clawhub package publish .` packs the folder (with the
+# built dist/) and auto-detects source attribution from the git origin remote,
+# so the release stays "source-linked".
+#
+# Auth: a ClawHub token. Generate it once locally — `clawhub login` then
+# `clawhub token` — and store it as the repo secret CLAWHUB_TOKEN.
+# (Secretless GitHub OIDC trusted publishing is also possible — see the note at
+# the bottom of this file.)
+#
+# Triggered manually. The default run is a dry run (resolves the publish, uploads
+# nothing). Re-run with dry_run unchecked to publish for real.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Validate only — resolve the publish, upload nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish to ClawHub
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: npm ci
+      # Build dist/ (gitignored) and run the oracle + auto tests as a gate.
+      - name: Build and test
+        run: npm test
+      - name: Authenticate to ClawHub
+        run: npx -y clawhub login --token "$CLAWHUB_TOKEN"
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+      # Publish the local folder: packs the built dist/, auto-attributes source
+      # from the checkout's GitHub origin remote (source-linked).
+      - name: Publish to ClawHub
+        run: |
+          npx -y clawhub package publish . --owner infino-ai ${{ inputs.dry_run && '--dry-run' || '' }}
+
+# --- Secretless alternative: OIDC trusted publishing ---
+# ClawHub supports package trusted publishing (package-only). One-time setup, by
+# a package manager, after the first manual/token publish (already done):
+#
+#   clawhub package trusted-publisher set @infino-ai/memory-infino \
+#     --repository infino-ai/memory-infino \
+#     --workflow-filename clawhub-publish.yml
+#
+# Then a workflow_dispatch run with `permissions: id-token: write` can publish
+# without CLAWHUB_TOKEN (the configured repo + workflow filename must match the
+# OIDC claim). Keep CLAWHUB_TOKEN around for first/tag/break-glass publishes.
