@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
-    "infino": "^0.1.0",
+    "@infino-ai/infino": "^0.1.0",
     "typebox": "^1.2.14"
   },
   "peerDependencies": {

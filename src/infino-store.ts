@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Infino-backed long-term memory: hybrid (BM25+vector) recall + SQL over memory,
 // on object storage. Self-contained on the published `infino` Node binding.
-import { connect, IndexSpec, type Connection, type Table, type ConnectOptions } from "infino";
+import { connect, IndexSpec, type Connection, type Table, type ConnectOptions } from "@infino-ai/infino";
 import { randomUUID } from "node:crypto";
 
 export type MemoryCategory = "preference" | "decision" | "entity" | "fact" | "other";
@@ -32,11 +32,16 @@ export interface InfinoStoreConfig {
   nCent?: number; // IVF centroids; 1 = exact (good for memory-scale stores)
   table?: string;
   connectOptions?: ConnectOptions;
+  /** Auto-merge accumulated superfiles after this many commits. Each store is
+   *  one commit = one superfile, so a long-lived memory fragments without it.
+   *  0 disables auto-compaction (call optimize() manually). Default 128. */
+  compactEvery?: number;
 }
 
 type Row = Record<string, unknown>;
 
 const DEFAULT_K = 8;
+const DEFAULT_COMPACT_EVERY = 128; // commits between automatic superfile merges
 const sqlStr = (s: string) => s.replace(/'/g, "''"); // single-quote escape
 
 export class InfinoMemoryStore {
@@ -44,10 +49,13 @@ export class InfinoMemoryStore {
   private handle: Table | null = null;
   private readonly table: string;
   private readonly projection = ["id", "text", "importance", "category", "created_at", "score"];
+  private readonly compactEvery: number;
+  private commitsSinceOptimize = 0;
 
   constructor(private cfg: InfinoStoreConfig) {
     this.db = connect(cfg.uri, cfg.connectOptions);
     this.table = cfg.table ?? "memories";
+    this.compactEvery = cfg.compactEvery ?? DEFAULT_COMPACT_EVERY;
   }
 
   // Open-or-create — WRITES ONLY. The create path must be followed by an append
@@ -99,6 +107,7 @@ export class InfinoMemoryStore {
   }): Promise<MemoryEntry> {
     const entry = this.makeEntry(input);
     this.ensureTable().append([this.dbRow(entry)] as unknown as Row[]); // one append = one commit
+    this.afterCommit();
     return entry;
   }
 
@@ -106,6 +115,7 @@ export class InfinoMemoryStore {
   async storeMany(inputs: Array<Parameters<InfinoMemoryStore["store"]>[0]>): Promise<number> {
     const entries = inputs.map((i) => this.makeEntry(i));
     this.ensureTable().append(entries.map((e) => this.dbRow(e)) as unknown as Row[]);
+    this.afterCommit();
     return entries.length;
   }
 
@@ -228,18 +238,43 @@ export class InfinoMemoryStore {
     return Number((rows[0] as { n?: unknown })?.n ?? 0);
   }
 
+  // ---------- maintenance ----------
+  /** Merge accumulated superfiles into fewer, larger ones. Each store is one
+   *  commit = one superfile; without periodic compaction recall latency grows
+   *  as the store fragments. Safe anytime (no-op until the table exists), and
+   *  best-effort — a failure leaves fragmentation but never corrupts data, so
+   *  it must not break a write. Auto-invoked every `compactEvery` commits. */
+  optimize(): void {
+    const t = this.handle;
+    if (!t) return;
+    try {
+      t.optimize();
+    } catch (err) {
+      console.error(`memory-infino: optimize() skipped — ${(err as Error).message}`);
+    }
+  }
+
   // ---------- helpers ----------
   private fetchN(opts: RecallOptions, k: number): number {
     const hasFilter = !!(opts.category || opts.since || opts.until);
     return opts.candidates ?? (hasFilter ? Math.max(20, k * 4) : k);
   }
 
-  /** INTERIM client-side scope filter. Replace with the engine's filtered
-   *  vector search (PR #173) once the Node binding exposes VectorFilter — then
-   *  the predicate is applied *inside* the kernel (true filtered kNN, no
-   *  over-fetch), e.g.:
-   *    vectorSearch("vector", vec, k, { projection, filter: { column, mode, query } })
-   */
+  /** Count commits; compact once `compactEvery` have accumulated since the last
+   *  merge. Runs on the write path, so it stays best-effort (see optimize()). */
+  private afterCommit(): void {
+    if (this.compactEvery <= 0) return;
+    if (++this.commitsSinceOptimize < this.compactEvery) return;
+    this.commitsSinceOptimize = 0;
+    this.optimize();
+  }
+
+  /** Client-side scope filter (over-fetch then trim). The binding now exposes
+   *  VectorFilter, but it only helps the pure-vector path: it filters on an
+   *  FTS-indexed column (category isn't indexed today), can't express numeric
+   *  time ranges (since/until), and the primary `hybrid_search` TVF takes no
+   *  filter argument. So scope() stays for hybrid + time-window recall; adopt
+   *  VectorFilter for category only if/when hybrid gains a filter param. */
   private scope(hits: MemoryHit[], o: RecallOptions): MemoryHit[] {
     return hits.filter(
       (h) =>

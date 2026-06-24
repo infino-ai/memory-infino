@@ -2,7 +2,7 @@
 
 An [OpenClaw](https://docs.openclaw.ai) memory plugin backed by [Infino](https://github.com/infino-ai/infino) — **hybrid (BM25 + vector) recall** on **object storage**, in one engine.
 
-> Status: early. Implements OpenClaw's memory-plugin contract with the three standard tools (`memory_recall` / `memory_store` / `memory_forget`). Built on the published `infino` Node binding.
+> Status: early. Implements OpenClaw's memory-plugin contract with the three standard tools (`memory_recall` / `memory_store` / `memory_forget`). Built on the published [`@infino-ai/infino`](https://www.npmjs.com/package/@infino-ai/infino) Node binding.
 
 ## Why infino for agent memory
 
@@ -18,20 +18,9 @@ An [OpenClaw](https://docs.openclaw.ai) memory plugin backed by [Infino](https:/
 | `memory_store` | Save a memory (embedded on write) |
 | `memory_forget` | Delete by id, or find-and-delete by query |
 
-## Install (internal — via Gemfury)
+## Install
 
-Published to the `infino` Gemfury account for internal team use (public npm at
-launch). It's a public Gemfury package, so no token is needed — installs just
-need the Gemfury smart proxy as the registry so the `infino` binding (and the
-plugin) resolve.
-
-Point npm at the proxy via a project or user `~/.npmrc`:
-
-```
-registry=https://npm-proxy.fury.io/infino/
-```
-
-Then install the plugin into OpenClaw and select it:
+Install the plugin into OpenClaw and select it:
 
 ```sh
 openclaw plugins install @infino-ai/memory-infino
@@ -74,6 +63,7 @@ Select the plugin for the memory slot and give it an embedder + a path:
 | `embedding` | provider/model/dimensions (+ apiKey/baseUrl). The plugin embeds text via this provider (infino is bring-your-own-vectors), so `dimensions` must match the model (infino requires 16–4096). Default provider is `local`. |
 | `dbPath` | local path or `s3://`/`gs://`/`az://` URI (default `memory/infino`) |
 | `nCent` | infino IVF centroid count; `1` = exact (right for memory-scale stores) |
+| `compactEvery` | auto-merge accumulated superfiles after this many stores (each store is one commit); keeps recall fast as memory grows. `0` disables. Default `128`. |
 | `storageOptions` | S3-compatible `endpoint`/`access_key`/`secret_key` |
 | `recallK` / `recallMaxChars` | results per recall (default 8) / max query chars embedded (default 1000) |
 
@@ -83,7 +73,7 @@ Supported embedders today: **`local`** (the default — in-process Hugging Face 
 
 **Layer 0 — the store, without OpenClaw (fastest signal):**
 ```sh
-npm install      # resolves infino from the Gemfury proxy (see .npmrc)
+npm install      # installs deps incl. @infino-ai/infino from public npm
 npm test         # builds + runs deterministic oracle tests on real infino
 ```
 

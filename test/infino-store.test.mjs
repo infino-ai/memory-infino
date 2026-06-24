@@ -62,3 +62,19 @@ test("forget removes a memory", async () => {
   assert.equal(m.forgetById(e.id), true);
   assert.equal(m.count(), 0);
 });
+
+test("auto-compaction triggers on the commit threshold; data and recall survive", async () => {
+  const m = new InfinoMemoryStore({
+    uri: mkdtempSync(join(tmpdir(), "mem-")),
+    dimensions: DIM,
+    nCent: 1,
+    compactEvery: 3, // each store is one commit, so this crosses the threshold
+  });
+  for (let i = 0; i < 5; i++) {
+    await m.store({ text: `note number ${i}`, vector: embed(`note number ${i}`) });
+  }
+  assert.equal(m.count(), 5); // all rows intact after the merge
+  m.optimize(); // explicit call is safe (merge-or-no-op)
+  const hits = m.recallKeyword("number", { k: 5 });
+  assert.ok(hits.length >= 1); // recall still works post-compaction
+});

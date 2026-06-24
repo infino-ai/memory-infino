@@ -10,6 +10,7 @@ export const DEFAULTS = {
   recallK: 8,
   recallMaxChars: 1000,
   nCent: 1,
+  compactEvery: 128,
 } as const;
 
 // Built-in dims for the common OpenAI models; other models must set dimensions.
@@ -39,6 +40,7 @@ export const memoryConfigSchema = buildJsonPluginConfigSchema({
     },
     dbPath: { type: "string" },
     nCent: { type: "integer", minimum: 1 },
+    compactEvery: { type: "integer", minimum: 0 },
     autoRecall: { type: "boolean" },
     autoCapture: { type: "boolean" },
     recallK: { type: "number" },
@@ -51,6 +53,7 @@ export interface MemoryConfig {
   embedding: { provider?: string; model: string; dimensions?: number; apiKey?: string; baseUrl?: string };
   dbPath?: string;
   nCent?: number;
+  compactEvery?: number;
   autoRecall?: boolean;
   autoCapture?: boolean;
   recallK?: number;
@@ -75,6 +78,7 @@ export function parseConfig(raw: unknown): MemoryConfig {
     },
     dbPath: c.dbPath,
     nCent: c.nCent,
+    compactEvery: c.compactEvery,
     autoRecall: c.autoRecall,
     autoCapture: c.autoCapture,
     recallK: c.recallK,
@@ -98,6 +102,7 @@ export function resolveStoreConfig(api: { resolvePath(p: string): string }, cfg:
     uri,
     dimensions: resolveDimensions(cfg),
     nCent: cfg.nCent ?? DEFAULTS.nCent,
+    compactEvery: cfg.compactEvery ?? DEFAULTS.compactEvery,
     connectOptions: mapStorage(cfg.storageOptions),
   };
 }
