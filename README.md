@@ -7,6 +7,7 @@ An [OpenClaw](https://docs.openclaw.ai) memory plugin backed by [Infino](https:/
 ## Why infino for agent memory
 
 - **Hybrid recall in one engine** — `memory_recall` fuses BM25 + vector with Reciprocal Rank Fusion. No separate keyword index, no rerank service.
+- **Seamless by default** — **auto-recall** injects relevant memories into context each turn and **auto-capture** stores salient statements automatically; the explicit tools stay for manual control. Both are configurable.
 - **Object-storage-native** — memory lives on a local path or S3/GCS/Azure; no daemon.
 - **SQL over memory** — the underlying store also supports structured/temporal queries (used internally; a future tool surface).
 
