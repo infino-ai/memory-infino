@@ -53,6 +53,24 @@
       "help": "Auto-merge accumulated superfiles after this many stores (each store is one commit). 0 disables. Default 128.",
       "advanced": true
     },
+    "autoRecall": {
+      "label": "Auto-Recall",
+      "help": "Automatically recall relevant memories and inject them into context each turn. Default on."
+    },
+    "autoCapture": {
+      "label": "Auto-Capture",
+      "help": "Automatically capture salient user statements (preferences, decisions, facts) into memory. Default on."
+    },
+    "captureMaxChars": {
+      "label": "Capture Max Chars",
+      "help": "Skip auto-capturing user messages longer than this. Default 2000.",
+      "advanced": true
+    },
+    "captureMaxPerTurn": {
+      "label": "Capture Max Per Turn",
+      "help": "Cap how many memories auto-capture stores per agent turn. Default 3.",
+      "advanced": true
+    },
     "storageOptions": {
       "label": "Storage Options",
       "advanced": true,
@@ -78,6 +96,10 @@
       "dbPath": { "type": "string" },
       "nCent": { "type": "integer", "minimum": 1 },
       "compactEvery": { "type": "integer", "minimum": 0 },
+      "autoRecall": { "type": "boolean" },
+      "autoCapture": { "type": "boolean" },
+      "captureMaxChars": { "type": "number", "minimum": 100, "maximum": 10000 },
+      "captureMaxPerTurn": { "type": "integer", "minimum": 0 },
       "recallK": { "type": "number" },
       "recallMaxChars": { "type": "number", "minimum": 100, "maximum": 10000 },
       "storageOptions": {

@@ -2,7 +2,7 @@
 
 An [OpenClaw](https://docs.openclaw.ai) memory plugin backed by [Infino](https://github.com/infino-ai/infino) — **hybrid (BM25 + vector) recall** on **object storage**, in one engine.
 
-> Status: early. Implements OpenClaw's memory-plugin contract with the three standard tools (`memory_recall` / `memory_store` / `memory_forget`). Built on the published [`@infino-ai/infino`](https://www.npmjs.com/package/@infino-ai/infino) Node binding.
+> Status: early. Implements OpenClaw's memory-plugin contract — the three tools (`memory_recall` / `memory_store` / `memory_forget`) plus **auto-recall** (relevant memories injected into context each turn) and **auto-capture** (salient user statements stored automatically). Built on the published [`@infino-ai/infino`](https://www.npmjs.com/package/@infino-ai/infino) Node binding.
 
 ## Why infino for agent memory
 
@@ -64,6 +64,9 @@ Select the plugin for the memory slot and give it an embedder + a path:
 | `dbPath` | local path or `s3://`/`gs://`/`az://` URI (default `memory/infino`) |
 | `nCent` | infino IVF centroid count; `1` = exact (right for memory-scale stores) |
 | `compactEvery` | auto-merge accumulated superfiles after this many stores (each store is one commit); keeps recall fast as memory grows. `0` disables. Default `128`. |
+| `autoRecall` | inject relevant memories into context automatically each turn (no tool call). Default `true`. |
+| `autoCapture` | store salient user statements (preferences / decisions / facts) automatically. Default `true`. |
+| `captureMaxChars` / `captureMaxPerTurn` | skip auto-capturing messages longer than this (default 2000) / cap memories stored per turn (default 3) |
 | `storageOptions` | S3-compatible `endpoint`/`access_key`/`secret_key` |
 | `recallK` / `recallMaxChars` | results per recall (default 8) / max query chars embedded (default 1000) |
 
@@ -88,17 +91,19 @@ openclaw                                     # restart the gateway; edits apply 
 
 ## Scope
 
-Intentionally lean — the three standard memory tools, hybrid recall, object storage. No reranking stack, multi-scope isolation, or management CLI.
+Hybrid recall + auto-recall / auto-capture + object storage, via the three standard memory tools. Deliberately out of scope for now: cross-encoder reranking, multi-scope (per-user/session) isolation, and a management CLI.
 
 ## Layout
 
 ```
 src/
-├── infino-store.ts   # store on infino: hybrid recall (RRF) / SQL / forget  (oracle-tested)
+├── infino-store.ts   # store on infino: hybrid recall (RRF) / SQL / forget / optimize  (oracle-tested)
+├── auto.ts           # auto-recall + auto-capture lifecycle hooks (+ pure helpers)
 ├── config.ts         # config schema + OpenClaw→infino mapping
 ├── embeddings.ts     # local (default, transformers.js) + Ollama + OpenAI-compatible embedders
-└── index.ts          # OpenClaw plugin entry: the three memory tools
+└── index.ts          # OpenClaw plugin entry: the three tools + installs the auto hooks
 test/
-└── infino-store.test.mjs   # Layer-0 oracle tests
+├── infino-store.test.mjs   # store oracle tests
+└── auto.test.mjs           # auto-recall/capture helpers + end-to-end hook flow
 openclaw.plugin.json  # plugin manifest (kind: memory, tools, config schema)
 ```

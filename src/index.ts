@@ -10,6 +10,7 @@ import { Type } from "typebox";
 import { InfinoMemoryStore } from "./infino-store.js";
 import { createEmbeddings } from "./embeddings.js";
 import { memoryConfigSchema, parseConfig, resolveStoreConfig, MEMORY_CATEGORIES, DEFAULTS } from "./config.js";
+import { installAutoMemory } from "./auto.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const reply = (t: string, details?: Record<string, unknown>) => ({
@@ -138,6 +139,23 @@ export default definePluginEntry({
       { name: "memory_forget" },
     );
 
-    api.logger?.info?.(`memory-infino registered (uri: ${storeCfg.uri}, dims: ${storeCfg.dimensions})`);
+    // Auto-recall (before_prompt_build) + auto-capture (agent_end) — parity with
+    // the default OpenClaw memory plugin. Both gated by config (default on).
+    installAutoMemory({
+      api,
+      store,
+      embed: (t: string) => embeddings.embed(t),
+      autoRecall: cfg.autoRecall ?? DEFAULTS.autoRecall,
+      autoCapture: cfg.autoCapture ?? DEFAULTS.autoCapture,
+      recallK,
+      recallMaxChars: recallMax,
+      captureMaxChars: cfg.captureMaxChars,
+      captureMaxPerTurn: cfg.captureMaxPerTurn,
+    });
+
+    api.logger?.info?.(
+      `memory-infino registered (uri: ${storeCfg.uri}, dims: ${storeCfg.dimensions}, ` +
+        `autoRecall: ${cfg.autoRecall ?? DEFAULTS.autoRecall}, autoCapture: ${cfg.autoCapture ?? DEFAULTS.autoCapture})`,
+    );
   },
 });

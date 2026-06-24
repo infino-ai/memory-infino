@@ -11,6 +11,10 @@ export const DEFAULTS = {
   recallMaxChars: 1000,
   nCent: 1,
   compactEvery: 128,
+  autoRecall: true,
+  autoCapture: true,
+  captureMaxChars: 2000,
+  captureMaxPerTurn: 3,
 } as const;
 
 // Built-in dims for the common OpenAI models; other models must set dimensions.
@@ -41,6 +45,10 @@ export const memoryConfigSchema = buildJsonPluginConfigSchema({
     dbPath: { type: "string" },
     nCent: { type: "integer", minimum: 1 },
     compactEvery: { type: "integer", minimum: 0 },
+    autoRecall: { type: "boolean" },
+    autoCapture: { type: "boolean" },
+    captureMaxChars: { type: "number", minimum: 100, maximum: 10000 },
+    captureMaxPerTurn: { type: "integer", minimum: 0 },
     recallK: { type: "number" },
     recallMaxChars: { type: "number", minimum: 100, maximum: 10000 },
     storageOptions: { type: "object", additionalProperties: { type: "string" } },
@@ -52,6 +60,10 @@ export interface MemoryConfig {
   dbPath?: string;
   nCent?: number;
   compactEvery?: number;
+  autoRecall?: boolean;
+  autoCapture?: boolean;
+  captureMaxChars?: number;
+  captureMaxPerTurn?: number;
   recallK?: number;
   recallMaxChars?: number;
   storageOptions?: Record<string, string>;
@@ -75,6 +87,10 @@ export function parseConfig(raw: unknown): MemoryConfig {
     dbPath: c.dbPath,
     nCent: c.nCent,
     compactEvery: c.compactEvery,
+    autoRecall: c.autoRecall,
+    autoCapture: c.autoCapture,
+    captureMaxChars: c.captureMaxChars,
+    captureMaxPerTurn: c.captureMaxPerTurn,
     recallK: c.recallK,
     recallMaxChars: c.recallMaxChars,
     storageOptions: c.storageOptions,
