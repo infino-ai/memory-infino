@@ -41,8 +41,6 @@ export const memoryConfigSchema = buildJsonPluginConfigSchema({
     dbPath: { type: "string" },
     nCent: { type: "integer", minimum: 1 },
     compactEvery: { type: "integer", minimum: 0 },
-    autoRecall: { type: "boolean" },
-    autoCapture: { type: "boolean" },
     recallK: { type: "number" },
     recallMaxChars: { type: "number", minimum: 100, maximum: 10000 },
     storageOptions: { type: "object", additionalProperties: { type: "string" } },
@@ -54,8 +52,6 @@ export interface MemoryConfig {
   dbPath?: string;
   nCent?: number;
   compactEvery?: number;
-  autoRecall?: boolean;
-  autoCapture?: boolean;
   recallK?: number;
   recallMaxChars?: number;
   storageOptions?: Record<string, string>;
@@ -79,8 +75,6 @@ export function parseConfig(raw: unknown): MemoryConfig {
     dbPath: c.dbPath,
     nCent: c.nCent,
     compactEvery: c.compactEvery,
-    autoRecall: c.autoRecall,
-    autoCapture: c.autoCapture,
     recallK: c.recallK,
     recallMaxChars: c.recallMaxChars,
     storageOptions: c.storageOptions,

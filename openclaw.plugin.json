@@ -53,14 +53,6 @@
       "help": "Auto-merge accumulated superfiles after this many stores (each store is one commit). 0 disables. Default 128.",
       "advanced": true
     },
-    "autoRecall": {
-      "label": "Auto-Recall",
-      "help": "Automatically inject relevant memories into context"
-    },
-    "autoCapture": {
-      "label": "Auto-Capture",
-      "help": "Automatically capture important information from conversations"
-    },
     "storageOptions": {
       "label": "Storage Options",
       "advanced": true,
@@ -86,8 +78,6 @@
       "dbPath": { "type": "string" },
       "nCent": { "type": "integer", "minimum": 1 },
       "compactEvery": { "type": "integer", "minimum": 0 },
-      "autoRecall": { "type": "boolean" },
-      "autoCapture": { "type": "boolean" },
       "recallK": { "type": "number" },
       "recallMaxChars": { "type": "number", "minimum": 100, "maximum": 10000 },
       "storageOptions": {
