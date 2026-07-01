@@ -9,10 +9,13 @@ name: Publish to ClawHub
 # built dist/) and auto-detects source attribution from the git origin remote,
 # so the release stays "source-linked".
 #
-# Auth: a ClawHub token. Generate it once locally — `clawhub login` then
-# `clawhub token` — and store it as the repo secret CLAWHUB_TOKEN.
-# (Secretless GitHub OIDC trusted publishing is also possible — see the note at
-# the bottom of this file.)
+# Auth: GitHub OIDC trusted publishing (secretless). The package's trusted
+# publisher is configured for this repo + workflow filename, so a run with
+# `id-token: write` authenticates as that publisher — no CLAWHUB_TOKEN, no
+# manual-override reason. (A token stored via `clawhub login --token` counts as
+# a *manual* publish and is rejected once trusted publishing is set, so we don't
+# log in here. Keep CLAWHUB_TOKEN for break-glass manual publishes, which then
+# also need `--manual-override-reason`.)
 #
 # Triggered manually. The default run is a dry run (resolves the publish, uploads
 # nothing). Re-run with dry_run unchecked to publish for real.
@@ -27,6 +30,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # OIDC: publish as the configured ClawHub trusted publisher
 
 jobs:
   publish:
@@ -42,10 +46,8 @@ jobs:
       # Build dist/ (gitignored) and run the oracle + auto tests as a gate.
       - name: Build and test
         run: npm test
-      - name: Authenticate to ClawHub
-        run: npx -y clawhub login --token "$CLAWHUB_TOKEN"
-        env:
-          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+      # No login step: the CLI auto-detects GitHub Actions OIDC (from the
+      # id-token permission above) and publishes as the trusted publisher.
       # Publish the local folder: packs the built dist/, auto-attributes source
       # from the checkout's GitHub origin remote (source-linked).
       - name: Publish to ClawHub
