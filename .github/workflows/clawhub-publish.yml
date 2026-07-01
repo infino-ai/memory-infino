@@ -9,13 +9,12 @@ name: Publish to ClawHub
 # built dist/) and auto-detects source attribution from the git origin remote,
 # so the release stays "source-linked".
 #
-# Auth: GitHub OIDC trusted publishing (secretless). The package's trusted
-# publisher is configured for this repo + workflow filename, so a run with
-# `id-token: write` authenticates as that publisher — no CLAWHUB_TOKEN, no
-# manual-override reason. (A token stored via `clawhub login --token` counts as
-# a *manual* publish and is rejected once trusted publishing is set, so we don't
-# log in here. Keep CLAWHUB_TOKEN for break-glass manual publishes, which then
-# also need `--manual-override-reason`.)
+# Auth: the CLAWHUB_TOKEN repo secret (generate once locally — `clawhub login`
+# then `clawhub token`). The package has a ClawHub trusted publisher configured,
+# which flags every non-OIDC publish as "manual" and requires an explicit
+# reason — so the publish passes `--manual-override-reason`. (The CLI does not
+# yet perform GitHub OIDC exchange, so secretless publishing isn't available;
+# token + override is the working path.)
 #
 # Triggered manually. The default run is a dry run (resolves the publish, uploads
 # nothing). Re-run with dry_run unchecked to publish for real.
@@ -30,7 +29,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write # OIDC: publish as the configured ClawHub trusted publisher
 
 jobs:
   publish:
@@ -40,28 +38,37 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22" # the clawhub CLI requires Node >= 22
       - name: Install dependencies
         run: npm ci
       # Build dist/ (gitignored) and run the oracle + auto tests as a gate.
       - name: Build and test
         run: npm test
-      # No login step: the CLI auto-detects GitHub Actions OIDC (from the
-      # id-token permission above) and publishes as the trusted publisher.
+      - name: Authenticate to ClawHub
+        run: npx -y clawhub login --token "$CLAWHUB_TOKEN"
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
       # Publish the local folder: packs the built dist/, auto-attributes source
-      # from the checkout's GitHub origin remote (source-linked).
+      # from the checkout's GitHub origin remote (source-linked). A trusted
+      # publisher is configured, so a token publish needs an override reason.
       - name: Publish to ClawHub
         run: |
-          npx -y clawhub package publish . --owner infino-ai ${{ inputs.dry_run && '--dry-run' || '' }}
+          npx -y clawhub package publish . --owner infino-ai \
+            --manual-override-reason "CI publish via clawhub-publish.yml (token auth; OIDC unsupported by CLI)" \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
 
-# --- Secretless alternative: OIDC trusted publishing ---
-# ClawHub supports package trusted publishing (package-only). One-time setup, by
-# a package manager, after the first manual/token publish (already done):
+# --- Trusted publisher config (currently set) ---
+# A trusted publisher is configured for this package (provider github-actions,
+# repo infino-ai/memory-infino, workflow clawhub-publish.yml):
 #
 #   clawhub package trusted-publisher set @infino-ai/memory-infino \
 #     --repository infino-ai/memory-infino \
 #     --workflow-filename clawhub-publish.yml
 #
-# Then a workflow_dispatch run with `permissions: id-token: write` can publish
-# without CLAWHUB_TOKEN (the configured repo + workflow filename must match the
-# OIDC claim). Keep CLAWHUB_TOKEN around for first/tag/break-glass publishes.
+# The intent is secretless OIDC publishing, but the clawhub CLI (v0.23.0) does
+# not yet perform the GitHub OIDC exchange — a run with `id-token: write` and no
+# token fails "Not logged in". Until the CLI supports it, we publish with the
+# CLAWHUB_TOKEN secret plus `--manual-override-reason` (above). Once the CLI can
+# do OIDC, drop the login + override and add `permissions: id-token: write`.
+# To remove the requirement entirely instead:
+#   clawhub package trusted-publisher delete @infino-ai/memory-infino
