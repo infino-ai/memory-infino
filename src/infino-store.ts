@@ -27,7 +27,7 @@ export interface RecallOptions {
   until?: number;
 }
 export interface InfinoStoreConfig {
-  uri: string; // local path or s3://|gs://|az://
+  uri: string; // local path or s3://|az://
   dimensions: number; // must match the embedder OpenClaw is configured with
   nCent?: number; // IVF centroids; 1 = exact (good for memory-scale stores)
   table?: string;

@@ -117,8 +117,11 @@ export function resolveStoreConfig(api: { resolvePath(p: string): string }, cfg:
   };
 }
 
-// storageOptions keys -> infino ConnectOptions (S3-compatible stores).
+// Pass storageOptions straight through to infino's ConnectOptions. Keys are
+// object_store's config strings (`aws_*` for S3, `azure_*` for Azure Blob);
+// infino reads no credentials from the environment. Omit to use ambient cloud
+// identity (an IAM instance role or Azure managed identity).
 function mapStorage(o?: Record<string, string>): InfinoStoreConfig["connectOptions"] {
-  if (!o || (!o.endpoint && !o.access_key)) return undefined;
-  return { endpoint: o.endpoint, region: o.region ?? "auto", accessKey: o.access_key, secretKey: o.secret_key };
+  if (!o || Object.keys(o).length === 0) return undefined;
+  return { storageOptions: o };
 }
