@@ -98,7 +98,7 @@ Hybrid recall + auto-recall / auto-capture + object storage, via the three stand
 
 ```
 src/
-├── infino-store.ts   # store on infino: hybrid recall (RRF) / SQL / forget / optimize  (oracle-tested)
+├── infino-store.ts   # store on infino: hybrid recall (RRF) / SQL / forget / optimize / gc  (oracle-tested)
 ├── auto.ts           # auto-recall + auto-capture lifecycle hooks (+ pure helpers)
 ├── config.ts         # config schema + OpenClaw→infino mapping
 ├── embeddings.ts     # local (default, transformers.js) + Ollama + OpenAI-compatible embedders
