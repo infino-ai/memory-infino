@@ -1,6 +1,6 @@
 {
   "name": "@infino-ai/memory-infino",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Infino-backed long-term memory for OpenClaw — hybrid (BM25+vector) recall and SQL over memory, on object storage.",
   "license": "Apache-2.0",
   "homepage": "https://github.com/infino-ai/memory-infino#readme",
@@ -58,7 +58,7 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
-    "@infino-ai/infino": "^0.1.1",
+    "@infino-ai/infino": "^0.1.2",
     "typebox": "^1.2.14"
   },
   "peerDependencies": {

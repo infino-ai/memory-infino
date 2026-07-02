@@ -63,6 +63,18 @@ test("forget removes a memory", async () => {
   assert.equal(m.count(), 0);
 });
 
+test("gc runs, reports what it reclaimed, and keeps live data", async () => {
+  const m = newStore();
+  await m.store({ text: "keep me", vector: embed("keep me") });
+  const e = await m.store({ text: "forget me", vector: embed("forget me") });
+  m.forgetById(e.id);
+  const before = m.count();
+  const report = m.gc(0); // reclaim orphaned storage now (0s grace)
+  assert.ok(report && typeof report.objectsDeleted === "number");
+  assert.ok(typeof report.bytesFreed === "number");
+  assert.equal(m.count(), before); // gc never touches live rows
+});
+
 test("auto-compaction triggers on the commit threshold; data and recall survive", async () => {
   const m = new InfinoMemoryStore({
     uri: mkdtempSync(join(tmpdir(), "mem-")),

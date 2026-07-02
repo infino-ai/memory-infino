@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // Infino-backed long-term memory: hybrid (BM25+vector) recall + SQL over memory,
 // on object storage. Self-contained on the published `infino` Node binding.
-import { connect, IndexSpec, type Connection, type Table, type ConnectOptions } from "@infino-ai/infino";
+import {
+  connect,
+  IndexSpec,
+  type Connection,
+  type Table,
+  type ConnectOptions,
+  type GcReport,
+} from "@infino-ai/infino";
 import { randomUUID } from "node:crypto";
 
 export type MemoryCategory = "preference" | "decision" | "entity" | "fact" | "other";
@@ -251,6 +258,23 @@ export class InfinoMemoryStore {
       t.optimize();
     } catch (err) {
       console.error(`memory-infino: optimize() skipped — ${(err as Error).message}`);
+    }
+  }
+
+  /** Reclaim storage left behind by forgotten memories. `optimize()` already
+   *  runs a gc after merging, so this is for reclaiming on demand — e.g. right
+   *  after a bulk forget() — without paying for a full compaction. `graceSecs`
+   *  is a safety window (default 0) so a concurrent reader or writer is never
+   *  raced; requires durable storage. Best-effort and a no-op until the table
+   *  exists. Returns what was reclaimed, or null if there was nothing to do. */
+  gc(graceSecs = 0): GcReport | null {
+    const t = this.readTable();
+    if (!t) return null;
+    try {
+      return t.gc(graceSecs);
+    } catch (err) {
+      console.error(`memory-infino: gc() skipped — ${(err as Error).message}`);
+      return null;
     }
   }
 
